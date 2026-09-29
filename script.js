@@ -1,3 +1,4 @@
+
 // ---------- ข้อมูลตั้งต้น: แม่สี 3 สี ----------
 const PRIMARY_COLORS = [
   { name: 'แดง', rgb: [224, 49, 49] },
@@ -43,6 +44,7 @@ let palette = [];       // {id, name, rgb, hex}
 let usedNames = new Set();
 let selected = [];      // เก็บ id ที่เลือกไว้ (สูงสุด 2)
 let nextId = 0;
+let ratio = 50;         // % ของสีที่ 1 (สีที่ 2 = 100 - ratio)
 
 // ---------- แปลงค่าสี ----------
 function rgbToHex([r, g, b]) {
@@ -68,15 +70,15 @@ function rgbToHsl([r, g, b]) {
 }
 
 // ผสมสีแบบลบ (คล้ายสีสีน้ำ/สีโปสเตอร์) ผ่าน CMY แทนการเฉลี่ย RGB ตรง ๆ
-function mixRgb(a, b) {
+// weightA = สัดส่วนของสี a (0-1) เช่น 0.7 คือใส่สี a 70% สี b 30%
+function mixRgb(a, b, weightA = 0.5) {
+  const wA = Math.min(1, Math.max(0, weightA));
+  const wB = 1 - wA;
   const toCmy = ([r, g, b]) => [1 - r / 255, 1 - g / 255, 1 - b / 255];
   const [c1, m1, y1] = toCmy(a);
   const [c2, m2, y2] = toCmy(b);
-  const c = (c1 + c2) / 2, m = (m1 + m2) / 2, y = (y1 + y2) / 2;
-  let mixed = [(1 - c) * 255, (1 - m) * 255, (1 - y) * 255];
-  // สั่นค่าเล็กน้อยแบบสุ่มคงที่ (จาก id) กันสีซ้ำเป๊ะเมื่อผสมวนไปเรื่อย ๆ
-  const jitter = () => (Math.random() - 0.5) * 6;
-  mixed = mixed.map(v => v + jitter());
+  const c = c1 * wA + c2 * wB, m = m1 * wA + m2 * wB, y = y1 * wA + y2 * wB;
+  const mixed = [(1 - c) * 255, (1 - m) * 255, (1 - y) * 255];
   return mixed.map(v => Math.max(0, Math.min(255, v)));
 }
 
@@ -157,7 +159,26 @@ function renderSlots() {
     slot.style.background = c ? c.hex : '';
     slot.innerHTML = `<span class="slot-label">${c ? c.name : 'สีที่ ' + (i + 1)}</span>`;
   });
-  document.getElementById('mixBtn').disabled = selected.length !== 2;
+  const ready = selected.length === 2;
+  document.getElementById('mixBtn').disabled = !ready;
+  document.getElementById('dishWrap').hidden = !ready;
+  document.getElementById('ratioRow').hidden = !ready;
+  if (ready) updateDish();
+}
+
+function currentPair() {
+  const a = palette.find(p => p.id === selected[0]);
+  const b = palette.find(p => p.id === selected[1]);
+  return [a, b];
+}
+
+function updateDish() {
+  const [a, b] = currentPair();
+  if (!a || !b) return;
+  const preview = mixRgb(a.rgb, b.rgb, ratio / 100);
+  document.getElementById('dish').style.background = rgbToHex(preview);
+  document.getElementById('ratioLabelA').textContent = `${a.name} ${ratio}%`;
+  document.getElementById('ratioLabelB').textContent = `${b.name} ${100 - ratio}%`;
 }
 
 function toggleSelect(id) {
@@ -167,22 +188,23 @@ function toggleSelect(id) {
     if (selected.length === 2) selected.shift();
     selected.push(id);
   }
+  ratio = 50; // เลือกคู่ใหม่ทุกครั้ง เริ่มที่สัดส่วนเท่ากันก่อน
+  document.getElementById('ratioSlider').value = 50;
   renderPalette();
   renderSlots();
 }
 
 function mixSelected() {
   if (selected.length !== 2) return;
-  const a = palette.find(p => p.id === selected[0]);
-  const b = palette.find(p => p.id === selected[1]);
-  const rgb = mixRgb(a.rgb, b.rgb);
+  const [a, b] = currentPair();
+  const rgb = mixRgb(a.rgb, b.rgb, ratio / 100);
   const name = uniqueColorName(rgb);
   const created = addColor(name, rgb);
 
   document.getElementById('resultSwatch').style.background = created.hex;
   document.getElementById('resultName').textContent = created.name;
   document.getElementById('resultHex').textContent =
-    `จาก ${a.name} + ${b.name} → ${created.hex}`;
+    `จาก ${a.name} ${ratio}% + ${b.name} ${100 - ratio}% → ${created.hex}`;
   const card = document.getElementById('resultCard');
   card.hidden = false;
   card.style.animation = 'none';
@@ -196,6 +218,10 @@ function mixSelected() {
 
 document.getElementById('mixBtn').addEventListener('click', mixSelected);
 document.getElementById('resetBtn').addEventListener('click', init);
+document.getElementById('ratioSlider').addEventListener('input', (e) => {
+  ratio = Number(e.target.value);
+  updateDish();
+});
 
 init();
 
