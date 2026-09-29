@@ -21,9 +21,23 @@
 
   <main>
     <section class="mix-stage" aria-live="polite">
-      <div class="slot" id="slotA"><span class="slot-label">สีที่ 1</span></div>
-      <div class="plus">+</div>
-      <div class="slot" id="slotB"><span class="slot-label">สีที่ 2</span></div>
+      <div class="slots-row">
+        <div class="slot" id="slotA"><span class="slot-label">สีที่ 1</span></div>
+        <div class="plus">+</div>
+        <div class="slot" id="slotB"><span class="slot-label">สีที่ 2</span></div>
+      </div>
+
+      <div class="dish-wrap" id="dishWrap" hidden>
+        <div class="dish" id="dish"></div>
+        <p class="dish-caption">จานสี — ตัวอย่างก่อนผสม</p>
+      </div>
+
+      <div class="ratio-row" id="ratioRow" hidden>
+        <span class="ratio-label" id="ratioLabelA">50%</span>
+        <input type="range" id="ratioSlider" min="10" max="90" step="5" value="50" aria-label="สัดส่วนสี">
+        <span class="ratio-label" id="ratioLabelB">50%</span>
+      </div>
+
       <button id="mixBtn" class="mix-btn" disabled>ผสมสี</button>
     </section>
 
