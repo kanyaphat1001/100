@@ -1,4 +1,5 @@
-const CACHE_NAME = 'mix-color-v1';
+
+const CACHE_NAME = 'mix-color-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -25,14 +26,16 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+// network-first: พยายามโหลดไฟล์ล่าสุดจากเน็ตก่อนเสมอ (สำหรับตอนพัฒนา/แก้โค้ดบ่อย ๆ)
+// ถ้าออฟไลน์ค่อย fallback ไปใช้ไฟล์ที่แคชไว้
 self.addEventListener('fetch', (event) => {
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      return cached || fetch(event.request).then((response) => {
+    fetch(event.request)
+      .then((response) => {
         const copy = response.clone();
         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
         return response;
-      }).catch(() => cached);
-    })
+      })
+      .catch(() => caches.match(event.request))
   );
 });
